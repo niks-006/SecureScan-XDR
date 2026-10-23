@@ -1,0 +1,3959 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>SecureScan XDR | Security Operations Center</title>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+
+    background:#050b16;
+
+    color:#00ffae;
+
+    font-family:Arial,sans-serif;
+
+    overflow-x:hidden;
+}
+
+.header{
+
+    width:100%;
+
+    padding:20px;
+
+    border-bottom:1px solid #00ffae33;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    background:#07111f;
+}
+
+.logo{
+
+    font-size:28px;
+
+    font-weight:bold;
+}
+
+.status-bar{
+
+    display:flex;
+
+    gap:20px;
+}
+
+.status{
+
+    border:1px solid #00ffae55;
+
+    padding:10px 20px;
+
+    border-radius:10px;
+
+    background:#0b1728;
+
+    font-size:14px;
+}
+
+.main{
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(auto-fit,minmax(350px,1fr));
+
+    gap:15px;
+
+    padding:15px;
+}
+
+.panel{
+
+    background:#08111d;
+
+    border:1px solid #00ffae33;
+
+    border-radius:15px;
+
+    padding:15px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    min-height:420px;
+}
+
+.panel-title{
+
+    font-size:20px;
+
+    margin-bottom:15px;
+
+    border-bottom:1px solid #00ffae22;
+
+    padding-bottom:10px;
+}
+
+#terminal,
+#alerts,
+#aiAnalysis{
+
+    flex:1;
+
+    overflow-y:auto;
+
+    background:#000;
+
+    border-radius:10px;
+
+    padding:10px;
+
+    font-family:monospace;
+
+    max-height:340px;
+
+    min-height:300px;
+}
+
+.log-entry{
+
+    margin-bottom:8px;
+
+    padding:8px;
+
+    border-bottom:1px solid #00ffae15;
+
+    color:#00ffae;
+
+}
+
+.log-time{
+
+    color:#777;
+
+}
+
+.log-event{
+
+    color:#00ffae;
+
+    font-weight:bold;
+}
+
+.log-user{
+
+    color:#ffaa00;
+}
+
+.log-ip{
+
+    color:#58a6ff;
+}
+
+.alert{
+
+    margin-bottom:12px;
+
+    padding:10px;
+
+    border-left:4px solid red;
+
+    background:#111;
+
+    border-radius:5px;
+
+    line-height:1.5;
+
+    color:#ff4a4a;
+}
+
+.alert.high{
+
+    border-left-color:#ffaa00;
+
+    color:#ffaa00;
+}
+
+.alert.medium{
+
+    border-left-color:#ffee00;
+
+    color:#ffee00;
+}
+
+.metrics{
+
+    display:grid;
+
+    grid-template-columns:1fr 1fr;
+
+    gap:15px;
+}
+
+.metric-card{
+
+    background:#0b1728;
+
+    border:1px solid #00ffae33;
+
+    border-radius:12px;
+
+    padding:20px;
+
+    text-align:center;
+}
+
+.metric-title{
+
+    font-size:16px;
+
+    margin-bottom:10px;
+}
+
+.metric-value{
+
+    font-size:42px;
+
+    font-weight:bold;
+}
+
+.threat-section{
+
+    margin-top:25px;
+}
+
+.threat-bar{
+
+    width:100%;
+
+    height:20px;
+
+    border-radius:20px;
+
+    background:#111;
+
+    overflow:hidden;
+
+    border:1px solid #00ffae33;
+}
+
+.threat-progress{
+
+    width:0%;
+
+    height:100%;
+
+    background:
+    linear-gradient(
+        90deg,
+        #00ffae,
+        #ffaa00,
+        #ff4a4a
+    );
+
+    transition:0.5s;
+}
+
+#targetInput{
+
+    padding:12px;
+
+    background:#111;
+
+    border:1px solid #00ffae33;
+
+    color:#00ffae;
+
+    border-radius:10px;
+
+    margin-bottom:10px;
+
+    outline:none;
+}
+
+#scanButton{
+
+    padding:12px;
+
+    background:#00ffae;
+
+    border:none;
+
+    border-radius:10px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+}
+
+#scanResults{
+
+    margin-top:15px;
+
+    overflow-y:auto;
+
+    max-height:250px;
+
+    font-family:monospace;
+}
+
+.feed-box{
+
+    background:#000;
+
+    padding:15px;
+
+    border-radius:10px;
+
+    flex:1;
+}
+
+.feed-item{
+
+    margin-bottom:15px;
+
+    font-family:monospace;
+}
+
+.feed-ioc{
+
+    color:#ffaa00;
+
+    font-weight:bold;
+}
+
+.feed-high{
+
+    color:#ffaa00;
+}
+
+.feed-crit{
+
+    color:#ff4a4a;
+
+    font-weight:bold;
+}
+
+.ai-item{
+
+    background:#07111f;
+
+    padding:12px;
+
+    border-radius:8px;
+
+    margin-bottom:12px;
+
+    border:1px solid #00ffae22;
+
+    line-height:1.6;
+}
+
+.map-box{
+
+    background:#050b16;
+
+    border-radius:10px;
+
+    flex:1;
+
+    position:relative;
+
+    border:1px solid #00ffae33;
+
+    overflow:hidden;
+
+    min-height:350px;
+
+    height:350px;
+}
+
+#forced-siem-map-viewport{
+
+    width:100%;
+
+    height:100%;
+
+    position:absolute;
+
+    top:0;
+
+    left:0;
+
+    z-index:5;
+}
+
+.map-overlay-banner{
+
+    position:absolute;
+
+    top:15px;
+
+    left:15px;
+
+    z-index:1000;
+
+    background:rgba(7,17,31,0.9);
+
+    border:1px solid #00ffae55;
+
+    padding:8px 15px;
+
+    border-radius:6px;
+
+    font-size:12px;
+
+    pointer-events:none;
+
+    color:#00ffcc;
+
+    font-weight:bold;
+}
+
+.map-legend{
+
+    position:absolute;
+
+    bottom:15px;
+
+    right:15px;
+
+    z-index:1000;
+
+    background:rgba(7,17,31,0.9);
+
+    border:1px solid #00ffae33;
+
+    padding:10px;
+
+    border-radius:6px;
+
+    font-size:11px;
+
+    font-family:monospace;
+
+    pointer-events:none;
+}
+
+.legend-row{
+
+    margin-bottom:4px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:6px;
+}
+
+.connection{
+
+    position:fixed;
+
+    right:15px;
+
+    bottom:15px;
+
+    z-index:99999;
+
+    padding:8px 14px;
+
+    border-radius:20px;
+
+    background:#111;
+
+    border:1px solid #00ffae55;
+
+    font-size:12px;
+}
+
+.online{
+
+    color:#00ffae;
+}
+
+.offline{
+
+    color:#ff4a4a;
+}
+
+.footer{
+
+    text-align:center;
+
+    padding:10px;
+
+    border-top:1px solid #00ffae22;
+
+    background:#07111f;
+
+    margin-top:20px;
+}
+
+@keyframes pulse{
+
+    0%{
+        opacity:.4;
+        transform:scale(.8);
+    }
+
+    50%{
+        opacity:1;
+        transform:scale(1.2);
+    }
+
+    100%{
+        opacity:.4;
+        transform:scale(.8);
+    }
+}
+
+.attack-marker{
+
+    animation:pulse 1s infinite;
+}
+
+
+/* SOC operations theme */
+:root{
+    --ink:#071018;
+    --surface:#0c1822;
+    --surface-raised:#102330;
+    --line:#203845;
+    --line-bright:#2b5663;
+    --text:#d8e7e8;
+    --muted:#76919a;
+    --cyan:#67e8e0;
+    --amber:#f7bd62;
+    --red:#ff6b6b;
+    --green:#7ee2a8;
+    --shadow:0 18px 50px rgba(0,0,0,.22);
+}
+
+html{
+    background:var(--ink);
+}
+
+body{
+    background:
+        linear-gradient(180deg,rgba(4,12,20,.2),rgba(3,9,15,.82)),
+        linear-gradient(rgba(103,232,224,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(103,232,224,.025) 1px, transparent 1px),
+        radial-gradient(circle at 85% 0%, rgba(23,51,60,.85) 0, transparent 32%),
+        radial-gradient(circle at 8% 100%, rgba(15,63,61,.28) 0, transparent 28%),
+        var(--ink);
+    background-size:auto,34px 34px,34px 34px,auto,auto;
+    background-attachment:fixed;
+    color:var(--text);
+    font-family:'Space Grotesk',sans-serif;
+}
+
+body::before{
+    content:'';
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    pointer-events:none;
+    opacity:.5;
+    background:
+        linear-gradient(115deg,transparent 0 46%,rgba(103,232,224,.065) 46.1% 46.2%,transparent 46.3%),
+        repeating-linear-gradient(90deg,transparent 0 92px,rgba(103,232,224,.045) 93px,transparent 94px),
+        repeating-linear-gradient(0deg,transparent 0 58px,rgba(103,232,224,.035) 59px,transparent 60px),
+        radial-gradient(ellipse at 50% 120%,rgba(27,113,103,.34),transparent 55%),
+        radial-gradient(ellipse at 50% -20%,rgba(24,71,92,.4),transparent 52%);
+    background-size:100% 100%,100% 100%,100% 100%;
+    animation:cyberDrift 18s linear infinite;
+}
+
+#cyberCanvas{
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    width:100%;
+    height:100%;
+    opacity:.22;
+    pointer-events:none;
+    mix-blend-mode:screen;
+}
+
+.header{
+    padding:28px 34px 25px;
+    border-bottom:1px solid var(--line);
+    background:rgba(7,16,24,.9);
+    box-shadow:0 12px 40px rgba(0,0,0,.2);
+}
+
+.brand-lockup{flex:1;min-width:0;}
+
+.brand-eyebrow{
+    margin-bottom:8px;
+    color:var(--cyan);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.2em;
+}
+
+.brand-eyebrow span{color:var(--muted);padding:0 5px;}
+
+.logo{
+    color:var(--text);
+    font-size:25px;
+    line-height:1;
+    letter-spacing:.01em;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+
+.logo-symbol{color:var(--cyan);font-size:31px;margin-right:8px;}
+.logo-muted{color:var(--muted);font-weight:400;}
+.brand-subtitle{margin-top:10px;color:var(--muted);font-size:12px;letter-spacing:.03em;}
+
+.status-bar{
+    gap:10px;
+    flex-shrink:0;
+}
+
+.status{
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:9px 13px;
+    background:rgba(16,35,48,.75);
+    color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+}
+
+.status:first-child{
+    color:var(--green);
+    border-color:rgba(126,226,168,.35);
+}
+
+.status:nth-child(2){
+    color:var(--cyan);
+    border-color:rgba(103,232,224,.3);
+}
+
+.workspace-ribbon{
+    max-width:1680px;
+    min-height:48px;
+    margin:0 auto;
+    padding:0 34px;
+    display:flex;
+    align-items:center;
+    gap:24px;
+    border-bottom:1px solid var(--line);
+    background:rgba(8,19,27,.76);
+    color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+}
+
+.ribbon-item{display:flex;align-items:center;gap:9px;white-space:nowrap;}
+.ribbon-item strong{color:var(--text);font-weight:500;}
+.ribbon-label{color:var(--muted);}
+.ribbon-live{color:var(--green);}
+.ribbon-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:blink 1.8s ease-in-out infinite;}
+.ribbon-spacer{flex:1;}
+
+.main{
+    max-width:1680px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:repeat(12,minmax(0,1fr));
+    gap:14px;
+    padding:22px 32px 30px;
+}
+
+.panel{
+    min-width:0;
+    min-height:0;
+    height:100%;
+    padding:18px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:
+        radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--accent) 8%,transparent),transparent 38%),
+        linear-gradient(145deg,rgba(16,35,48,.98),rgba(7,18,27,.98));
+    box-shadow:var(--shadow);
+    position:relative;
+    overflow:hidden;
+}
+
+.panel::before{
+    content:'';
+    position:absolute;
+    top:0;
+    left:18px;
+    right:18px;
+    height:1px;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);
+    opacity:.45;
+}
+
+.panel::after{
+    content:'';
+    position:absolute;
+    top:0;
+    right:0;
+    width:52px;
+    height:52px;
+    pointer-events:none;
+    border-top:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
+    border-right:1px solid color-mix(in srgb,var(--accent) 42%,transparent);
+    border-radius:0 10px 0 0;
+    opacity:.75;
+}
+
+.panel:nth-child(1){grid-column:span 7;min-height:480px;}
+.panel:nth-child(2){grid-column:span 5;min-height:480px;}
+.panel:nth-child(3),.panel:nth-child(4),.panel:nth-child(5){grid-column:span 4;min-height:300px;}
+.panel:nth-child(6){grid-column:span 5;min-height:410px;}
+.panel:nth-child(7){grid-column:span 7;min-height:410px;}
+
+.panel-title{
+    color:var(--text);
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    margin-bottom:15px;
+    padding-bottom:12px;
+    border-bottom:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));
+}
+
+.panel-title::first-letter{
+    color:var(--cyan);
+}
+
+#terminal,#alerts,#aiAnalysis{
+    min-height:0;
+    max-height:none;
+    background:rgba(4,11,16,.72);
+    border:1px solid rgba(43,86,99,.55);
+    border-radius:4px;
+    padding:11px;
+    font-family:'IBM Plex Mono',monospace;
+}
+
+#terminal:empty::before,
+#alerts:empty::before,
+#aiAnalysis:empty::before{
+    display:block;
+    padding:42px 20px;
+    color:#46636d;
+    content:'AWAITING LIVE TELEMETRY';
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-align:center;
+}
+
+#alerts:empty::before{content:'NO ACTIVE INCIDENTS';}
+#aiAnalysis:empty::before{content:'CORRELATION ENGINE STANDING BY';}
+
+.log-entry{
+    margin-bottom:4px;
+    padding:9px 8px;
+    border-bottom:1px solid rgba(43,86,99,.35);
+    color:var(--text);
+    font-size:11px;
+    line-height:1.5;
+    animation:reveal .25s ease both;
+}
+
+.log-time{color:var(--muted);}
+.log-event{color:var(--cyan);font-weight:600;}
+.log-user{color:var(--amber);}
+.log-ip{color:#93b9ff;}
+
+.alert{
+    margin-bottom:9px;
+    padding:12px;
+    border:1px solid rgba(255,107,107,.3);
+    border-left:3px solid var(--red);
+    border-radius:4px;
+    background:rgba(82,25,32,.25);
+    color:#ffaaa6;
+    font-size:12px;
+    line-height:1.55;
+}
+
+.alert.high{border-color:rgba(247,189,98,.35);border-left-color:var(--amber);background:rgba(90,60,25,.22);color:#ffd99d;}
+.alert.medium{border-color:rgba(247,189,98,.2);border-left-color:#d9a54f;background:rgba(70,54,25,.16);color:#e8c98f;}
+
+.metrics{gap:9px;}
+
+.metric-card{
+    padding:15px 12px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    background:rgba(7,18,26,.72);
+    text-align:left;
+}
+
+.metric-title{
+    margin-bottom:8px;
+    color:var(--muted);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+}
+
+.metric-value{color:var(--cyan);font-size:32px;line-height:1;font-weight:600;}
+.metric-card:nth-child(2) .metric-value{color:var(--red);}
+.metric-card:nth-child(3) .metric-value{color:var(--amber);}
+
+.threat-section{margin-top:20px;}
+.threat-section h3{color:var(--muted);font-size:11px;letter-spacing:.1em;text-transform:uppercase;}
+.threat-bar{height:9px;border:1px solid var(--line);border-radius:2px;background:#061017;}
+.threat-progress{background:linear-gradient(90deg,var(--green),var(--amber),var(--red));}
+
+.feed-box{padding:12px;border:1px solid var(--line);border-radius:4px;background:rgba(4,11,16,.62);}
+.feed-item{margin-bottom:12px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;line-height:1.6;}
+
+#targetInput{
+    padding:12px;
+    margin-bottom:9px;
+    border:1px solid var(--line-bright);
+    border-radius:4px;
+    background:#07131c;
+    color:var(--text);
+    font-family:'IBM Plex Mono',monospace;
+}
+
+#targetInput:focus{border-color:var(--cyan);outline:none;box-shadow:0 0 0 2px rgba(103,232,224,.1);}
+
+#scanButton{
+    padding:12px;
+    border:1px solid var(--cyan);
+    border-radius:4px;
+    background:rgba(103,232,224,.12);
+    color:var(--cyan);
+    font-family:'IBM Plex Mono',monospace;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+}
+
+#scanButton:hover{background:var(--cyan);color:var(--ink);}
+
+.ai-item{padding:12px;border:1px solid var(--line);border-left:2px solid var(--cyan);border-radius:4px;background:rgba(7,18,26,.8);font-size:12px;line-height:1.6;}
+
+.map-box{height:100%;min-height:340px;border:1px solid var(--line);border-radius:4px;background:#07131a;}
+.map-box .leaflet-container{background:#050b10;filter:saturate(.8) contrast(1.08);}
+.map-overlay-banner{top:13px;left:13px;padding:8px 11px;border:1px solid rgba(103,232,224,.35);border-radius:3px;background:rgba(7,19,26,.92);color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;}
+.map-legend{bottom:13px;right:13px;padding:9px;border:1px solid var(--line);border-radius:3px;background:rgba(7,19,26,.92);color:var(--muted);}
+.point-attack{color:#ff6b7d;}
+.point-threat{color:var(--amber);}
+
+.connection{right:24px;bottom:20px;padding:8px 12px;border:1px solid var(--line);border-radius:3px;background:#0c1b24;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.05em;}
+.online{color:var(--green);border-color:rgba(126,226,168,.4);}
+.offline{color:var(--amber);}
+
+.footer{margin-top:0;padding:14px 32px;border-top:1px solid var(--line);background:rgba(7,16,24,.9);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;}
+
+/* Live-machine finish */
+body::after{
+    content:'';
+    position:fixed;
+    inset:0;
+    z-index:20;
+    pointer-events:none;
+    background:linear-gradient(transparent 0%,rgba(103,232,224,.018) 50%,transparent 100%);
+    background-size:100% 7px;
+    mix-blend-mode:screen;
+    opacity:.35;
+}
+
+.panel{
+    --accent:var(--cyan);
+    isolation:isolate;
+    transition:transform .28s ease, border-color .28s ease, box-shadow .28s ease;
+}
+
+.panel:nth-child(2){--accent:var(--red);}
+.panel:nth-child(3){--accent:var(--amber);}
+.panel:nth-child(4){--accent:#9aafff;}
+.panel:nth-child(5){--accent:var(--green);}
+.panel:nth-child(6){--accent:#ca9cff;}
+.panel:nth-child(7){--accent:var(--cyan);}
+
+.panel::before{
+    background:linear-gradient(90deg,transparent,var(--accent),transparent);
+    box-shadow:0 0 18px var(--accent);
+    opacity:.72;
+}
+
+.panel:hover{
+    transform:translateY(-3px);
+    border-color:color-mix(in srgb,var(--accent) 45%,var(--line));
+    box-shadow:0 20px 55px rgba(0,0,0,.3),0 0 24px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+
+.panel-title{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    position:relative;
+}
+
+.panel-title::after{
+    content:'LIVE';
+    margin-left:auto;
+    padding:4px 6px;
+    border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));
+    border-radius:2px;
+    color:var(--accent);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:8px;
+    letter-spacing:.12em;
+    opacity:.8;
+}
+
+.panel:nth-child(3) .panel-title::after,
+.panel:nth-child(4) .panel-title::after,
+.panel:nth-child(5) .panel-title::after{content:'READY';}
+
+#terminal,#alerts,#aiAnalysis{
+    box-shadow:inset 0 0 30px rgba(0,0,0,.24);
+}
+
+#terminal:empty,
+#alerts:empty,
+#aiAnalysis:empty{
+    position:relative;
+    overflow:hidden;
+    background:
+        radial-gradient(circle at 50% 45%,rgba(103,232,224,.075) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(103,232,224,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(103,232,224,.035) 1px,transparent 1px),
+        rgba(4,11,16,.72);
+    background-size:auto,28px 28px,28px 28px,auto;
+}
+
+#terminal:empty::after,
+#alerts:empty::after,
+#aiAnalysis:empty::after{
+    content:'';
+    position:absolute;
+    width:160px;
+    height:160px;
+    top:50%;
+    left:50%;
+    border:1px solid rgba(103,232,224,.16);
+    border-radius:50%;
+    transform:translate(-50%,-50%);
+    box-shadow:0 0 0 18px rgba(103,232,224,.025),0 0 0 38px rgba(103,232,224,.018);
+    animation:radar 3.8s ease-in-out infinite;
+}
+
+#alerts:empty{background-color:rgba(26,10,14,.45);}
+#alerts:empty::after{border-color:rgba(255,107,107,.16);box-shadow:0 0 0 18px rgba(255,107,107,.025),0 0 0 38px rgba(255,107,107,.018);}
+#aiAnalysis:empty{background-color:rgba(18,10,29,.36);}
+
+.log-entry:hover{
+    border-radius:3px;
+    background:rgba(103,232,224,.06);
+    box-shadow:inset 2px 0 var(--cyan);
+}
+
+.alert{
+    box-shadow:0 8px 22px rgba(0,0,0,.15);
+    animation:alertIn .35s ease both;
+}
+
+.alert:hover{transform:translateX(3px);filter:brightness(1.12);}
+
+.metric-card{
+    position:relative;
+    overflow:hidden;
+    transition:transform .2s ease,border-color .2s ease,background .2s ease;
+}
+
+.metric-card::after{
+    content:'';
+    position:absolute;
+    right:-18px;
+    bottom:-30px;
+    width:80px;
+    height:80px;
+    border:1px solid rgba(103,232,224,.15);
+    border-radius:50%;
+}
+
+.metric-card:hover{transform:translateY(-2px);border-color:var(--line-bright);background:rgba(16,35,48,.95);}
+.metric-card:nth-child(2)::after{border-color:rgba(255,107,107,.2);}
+.metric-card:nth-child(3)::after{border-color:rgba(247,189,98,.2);}
+
+.ribbon-item{transition:color .2s ease;}
+.ribbon-item:hover{color:var(--text);}
+
+.map-box{box-shadow:inset 0 0 45px rgba(0,0,0,.45),0 0 25px rgba(103,232,224,.05);}
+.map-box::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    z-index:6;
+    pointer-events:none;
+    border:1px solid rgba(103,232,224,.12);
+    box-shadow:inset 0 0 24px rgba(103,232,224,.07);
+}
+
+@keyframes radar{0%,100%{opacity:.25;transform:translate(-50%,-50%) scale(.88);}50%{opacity:.8;transform:translate(-50%,-50%) scale(1);}}
+@keyframes alertIn{from{opacity:0;transform:translateX(8px);}to{opacity:1;transform:translateX(0);}}
+
+::-webkit-scrollbar{width:7px;height:7px;}
+::-webkit-scrollbar-track{background:#071018;}
+::-webkit-scrollbar-thumb{background:#294651;border-radius:8px;}
+
+@keyframes reveal{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:translateY(0);}}
+@keyframes blink{0%,100%{opacity:.45;}50%{opacity:1;}}
+@keyframes cyberDrift{0%{transform:translate3d(0,0,0);}50%{transform:translate3d(0,12px,0);}100%{transform:translate3d(0,0,0);}}
+
+@media(max-width:1050px){
+    .main{padding:18px;}
+    .panel:nth-child(n){grid-column:span 6;}
+    .panel:nth-child(1),.panel:nth-child(2),.panel:nth-child(6),.panel:nth-child(7){min-height:400px;}
+}
+
+@media(max-width:680px){
+    .header{padding:20px 18px;align-items:flex-start;gap:15px;flex-direction:column;}
+    .logo{font-size:20px;white-space:normal;}
+    .logo-symbol{font-size:24px;}
+    .logo-muted{display:block;margin:7px 0 0 32px;font-size:16px;}
+    .brand-subtitle{font-size:11px;}
+    .status-bar{width:100%;flex-wrap:wrap;}
+    .status{flex:1;min-width:145px;}
+    .workspace-ribbon{padding:10px 18px;min-height:0;flex-wrap:wrap;gap:12px;}
+    .ribbon-spacer{display:none;}
+    .main{display:block;padding:12px;}
+    .panel:nth-child(n){min-height:340px;margin-bottom:12px;}
+    .panel:nth-child(1),.panel:nth-child(2){min-height:430px;}
+}
+
+/* Command-center layout */
+:root{
+    --ink:#080f18;
+    --surface:#101b28;
+    --surface-raised:#142333;
+    --line:#26394a;
+    --line-bright:#3b596b;
+    --text:#edf4fa;
+    --muted:#91a4b5;
+    --cyan:#61e5d2;
+    --amber:#ffbf69;
+    --red:#ff7185;
+    --green:#65dfa0;
+    --shadow:0 14px 40px rgba(0,0,0,.22);
+}
+
+html{scroll-behavior:smooth;}
+
+body{
+    background:
+        radial-gradient(ellipse at 90% -12%,rgba(37,103,121,.22),transparent 42%),
+        radial-gradient(ellipse at 0% 80%,rgba(22,104,88,.12),transparent 36%),
+        var(--ink);
+    background-attachment:fixed;
+}
+
+body::before,body::after,#cyberCanvas{display:none;}
+
+.header{
+    position:relative;
+    max-width:1680px;
+    margin:0 auto;
+    padding:22px 34px;
+    border-bottom:1px solid rgba(145,164,181,.16);
+    background:rgba(8,15,24,.84);
+    box-shadow:none;
+    backdrop-filter:blur(18px);
+}
+
+.brand-eyebrow{color:var(--cyan);}
+.logo{font-size:27px;letter-spacing:-.03em;}
+.logo-symbol{font-size:29px;}
+.brand-subtitle{color:#9aabba;}
+.status{border-radius:999px;background:rgba(18,34,48,.8);}
+.workspace-ribbon{
+    max-width:1680px;
+    min-height:44px;
+    border-color:rgba(145,164,181,.12);
+    background:rgba(10,19,29,.72);
+}
+
+.overview{
+    max-width:1680px;
+    margin:0 auto;
+    padding:28px 32px 8px;
+    display:flex;
+    align-items:stretch;
+    justify-content:space-between;
+    gap:24px;
+}
+
+.overview-copy{
+    align-self:center;
+    max-width:760px;
+}
+
+.overview-kicker{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    margin-bottom:10px;
+    color:var(--cyan);
+    font:600 10px 'IBM Plex Mono',monospace;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+}
+
+.overview-kicker::before{
+    content:'';
+    width:22px;
+    height:1px;
+    background:var(--cyan);
+    box-shadow:0 0 10px rgba(97,229,210,.75);
+}
+
+.overview h1{
+    color:var(--text);
+    font-size:clamp(28px,3.2vw,42px);
+    line-height:1.08;
+    letter-spacing:-.045em;
+}
+
+.overview-copy p{
+    max-width:620px;
+    margin-top:10px;
+    color:var(--muted);
+    font-size:13px;
+    line-height:1.65;
+}
+
+.overview-actions{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:9px;
+    margin-top:17px;
+}
+
+.overview-link{
+    display:inline-flex;
+    min-height:38px;
+    align-items:center;
+    justify-content:center;
+    padding:0 14px;
+    border:1px solid var(--line-bright);
+    border-radius:5px;
+    color:var(--text);
+    background:rgba(20,35,51,.68);
+    font:600 10px 'IBM Plex Mono',monospace;
+    letter-spacing:.06em;
+    text-decoration:none;
+    text-transform:uppercase;
+    transition:background .18s ease,border-color .18s ease,transform .18s ease;
+}
+
+.overview-link.primary{
+    border-color:rgba(97,229,210,.52);
+    color:var(--cyan);
+    background:rgba(97,229,210,.08);
+}
+
+.overview-link:hover{
+    transform:translateY(-1px);
+    border-color:var(--cyan);
+    background:rgba(97,229,210,.13);
+}
+
+.overview-status{
+    min-width:245px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    padding:18px 20px;
+    border:1px solid var(--line);
+    border-radius:9px;
+    background:
+        radial-gradient(circle at 85% 12%,rgba(97,229,210,.12),transparent 48%),
+        linear-gradient(145deg,rgba(19,36,50,.95),rgba(12,23,34,.95));
+    box-shadow:var(--shadow);
+}
+
+.status-orbit{
+    position:relative;
+    width:48px;
+    height:48px;
+    flex:0 0 48px;
+    display:grid;
+    place-items:center;
+    border:1px solid rgba(97,229,210,.4);
+    border-radius:50%;
+    color:var(--cyan);
+    font-size:18px;
+    box-shadow:0 0 26px rgba(97,229,210,.12),inset 0 0 18px rgba(97,229,210,.08);
+}
+
+.status-orbit::before,.status-orbit::after{
+    content:'';
+    position:absolute;
+    inset:-6px;
+    border:1px solid rgba(97,229,210,.14);
+    border-radius:50%;
+}
+
+.status-orbit::after{inset:7px;border-color:rgba(97,229,210,.2);}
+.overview-status-label{color:var(--muted);font:500 9px 'IBM Plex Mono',monospace;letter-spacing:.14em;text-transform:uppercase;}
+.overview-status-value{margin-top:5px;color:var(--text);font-size:14px;font-weight:600;}
+.overview-status-meta{margin-top:5px;color:var(--green);font:10px 'IBM Plex Mono',monospace;}
+
+.main{
+    padding:16px 32px 34px;
+    gap:14px;
+}
+
+.panel{
+    padding:18px;
+    border:1px solid rgba(130,158,179,.18);
+    border-radius:8px;
+    background:
+        linear-gradient(145deg,rgba(18,31,45,.96),rgba(12,22,33,.96));
+    box-shadow:0 10px 30px rgba(0,0,0,.16);
+}
+
+.panel::before{
+    left:18px;
+    right:18px;
+    opacity:.4;
+}
+
+.panel::after{display:none;}
+.panel:hover{transform:translateY(-2px);border-color:rgba(97,229,210,.34);box-shadow:0 15px 35px rgba(0,0,0,.24);}
+.panel:nth-child(1){grid-column:span 8;min-height:430px;}
+.panel:nth-child(2){grid-column:span 4;min-height:430px;}
+.panel:nth-child(3){grid-column:span 12;min-height:0;}
+.panel:nth-child(4),.panel:nth-child(5),.panel:nth-child(6){grid-column:span 4;min-height:330px;}
+.panel:nth-child(7){grid-column:span 7;min-height:400px;}
+
+.panel-title{
+    min-height:31px;
+    margin-bottom:14px;
+    padding-bottom:11px;
+    font-size:12px;
+    letter-spacing:.1em;
+}
+
+.panel-title::first-letter{color:var(--accent);}
+.panel-title::after{border-radius:999px;padding:4px 8px;background:color-mix(in srgb,var(--accent) 7%,transparent);}
+
+#terminal,#alerts,#aiAnalysis{
+    padding:10px;
+    border-color:rgba(130,158,179,.14);
+    border-radius:5px;
+    background:rgba(5,12,20,.72);
+}
+
+.log-entry{
+    display:grid;
+    grid-template-columns:minmax(72px,auto) minmax(110px,1fr) minmax(80px,.65fr) minmax(105px,.8fr);
+    align-items:center;
+    gap:10px;
+    margin:0;
+    padding:10px 9px;
+    border-bottom:1px solid rgba(130,158,179,.1);
+    font-size:10px;
+}
+
+.log-time{font-size:9px;}
+.log-event{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.log-user,.log-ip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.alert{border-radius:5px;font-size:11px;}
+
+.metrics{grid-template-columns:repeat(4,minmax(0,1fr));}
+.metric-card{
+    min-height:92px;
+    padding:16px;
+    border-radius:6px;
+    background:linear-gradient(145deg,rgba(8,19,29,.9),rgba(13,27,39,.85));
+}
+
+.metric-value{font-size:30px;}
+.metric-card:nth-child(4) .metric-value{color:#a5b9ff;}
+.metric-card::after{right:-12px;bottom:-40px;opacity:.6;}
+.threat-section{display:grid;grid-template-columns:150px minmax(0,1fr);align-items:center;gap:18px;margin-top:15px;}
+.threat-section h3{margin:0!important;font:600 10px 'IBM Plex Mono',monospace;}
+.threat-bar{height:8px;}
+.feed-box{border-radius:5px;}
+.feed-item{padding:10px 0;border-bottom:1px solid rgba(130,158,179,.11);}
+.feed-item:last-child{border-bottom:0;}
+
+#targetInput{
+    width:100%;
+    min-height:42px;
+    border-radius:5px;
+    font-size:11px;
+}
+
+#scanButton{
+    min-height:41px;
+    border-radius:5px;
+    font-size:10px;
+    font-weight:600;
+}
+
+#scanResults{
+    padding:10px;
+    border:1px solid rgba(130,158,179,.13);
+    border-radius:5px;
+    color:var(--muted);
+    font-size:11px;
+    line-height:1.65;
+}
+
+.ai-item{border-radius:5px;}
+.map-box{border-radius:6px;}
+.map-box::after{border-radius:6px;}
+.connection{right:22px;bottom:18px;box-shadow:0 8px 24px rgba(0,0,0,.28);}
+.footer{border-color:rgba(145,164,181,.14);background:rgba(8,15,24,.8);}
+
+@media(max-width:1050px){
+    .overview{padding:24px 20px 8px;}
+    .main{padding:14px 20px 28px;}
+    .panel:nth-child(n){grid-column:span 6;min-height:340px;}
+    .panel:nth-child(3){grid-column:span 12;}
+}
+
+@media(max-width:680px){
+    .header{padding:18px;align-items:flex-start;gap:14px;}
+    .overview{display:block;padding:24px 18px 8px;}
+    .overview h1{font-size:30px;}
+    .overview-status{margin-top:20px;min-width:0;}
+    .main{display:grid;grid-template-columns:minmax(0,1fr);padding:12px;}
+    .panel:nth-child(n){grid-column:1;min-height:320px;margin:0;}
+    .panel:nth-child(1),.panel:nth-child(2){min-height:390px;}
+    .metrics{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .threat-section{grid-template-columns:1fr;gap:10px;}
+    .log-entry{grid-template-columns:auto 1fr;gap:5px 9px;}
+    .log-time{grid-column:1;}
+    .log-event{grid-column:2;}
+    .log-user{grid-column:1;}
+    .log-ip{grid-column:2;}
+    .connection{right:12px;bottom:12px;}
+}
+
+@media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;}
+}
+
+/* Night-shift SOC palette */
+:root{
+    --ink:#070c11;
+    --surface:#0d151c;
+    --surface-raised:#121f27;
+    --line:#24343b;
+    --line-bright:#3a5a58;
+    --text:#e4eee9;
+    --muted:#849a97;
+    --cyan:#40dfc0;
+    --amber:#f2b84b;
+    --red:#ff5f6d;
+    --green:#a3f56a;
+    --shadow:0 16px 38px rgba(0,0,0,.28);
+}
+
+body{
+    background:
+        radial-gradient(ellipse at 86% -12%,rgba(29,111,99,.2),transparent 38%),
+        radial-gradient(ellipse at 4% 52%,rgba(21,66,72,.16),transparent 34%),
+        linear-gradient(135deg,#070c11 0%,#091119 52%,#080e13 100%);
+}
+
+.header{
+    background:linear-gradient(100deg,rgba(8,15,20,.97),rgba(11,22,27,.94));
+    border-bottom-color:rgba(64,223,192,.2);
+}
+
+.brand-eyebrow,.overview-kicker{color:var(--green);}
+.logo-symbol{color:var(--green);text-shadow:0 0 18px rgba(163,245,106,.3);}
+.status:first-child{
+    color:var(--green);
+    border-color:rgba(163,245,106,.32);
+    background:rgba(163,245,106,.055);
+}
+.status:nth-child(2){
+    color:var(--cyan);
+    border-color:rgba(64,223,192,.28);
+    background:rgba(64,223,192,.045);
+}
+
+.workspace-ribbon{
+    border-bottom-color:rgba(64,223,192,.14);
+    background:rgba(8,16,21,.88);
+}
+
+.overview{
+    background:
+        radial-gradient(ellipse at 82% 0%,rgba(64,223,192,.055),transparent 36%);
+}
+
+.overview h1{
+    text-shadow:0 0 32px rgba(64,223,192,.08);
+}
+.overview-status{
+    border-color:rgba(64,223,192,.24);
+    background:
+        radial-gradient(circle at 90% 10%,rgba(64,223,192,.12),transparent 45%),
+        linear-gradient(145deg,rgba(16,31,37,.98),rgba(10,20,26,.98));
+}
+.status-orbit{
+    color:var(--green);
+    border-color:rgba(163,245,106,.48);
+    box-shadow:0 0 28px rgba(163,245,106,.1),inset 0 0 18px rgba(163,245,106,.09);
+}
+.status-orbit::before{border-color:rgba(163,245,106,.15);}
+.status-orbit::after{border-color:rgba(64,223,192,.23);}
+.overview-status-meta{color:var(--green);}
+
+.overview-link{
+    border-color:rgba(132,154,151,.28);
+    background:rgba(13,25,31,.8);
+}
+.overview-link.primary{
+    border-color:rgba(163,245,106,.45);
+    color:var(--green);
+    background:rgba(163,245,106,.07);
+}
+.overview-link:hover{
+    border-color:var(--green);
+    background:rgba(163,245,106,.12);
+}
+
+.panel{
+    border-color:rgba(132,154,151,.19);
+    background:
+        radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--accent) 5%,transparent),transparent 42%),
+        linear-gradient(145deg,rgba(16,27,34,.97),rgba(10,18,24,.98));
+}
+.panel:hover{
+    border-color:color-mix(in srgb,var(--accent) 42%,var(--line));
+    box-shadow:0 16px 38px rgba(0,0,0,.3),0 0 22px color-mix(in srgb,var(--accent) 8%,transparent);
+}
+.panel:nth-child(1){--accent:var(--cyan);}
+.panel:nth-child(2){--accent:var(--red);}
+.panel:nth-child(3){--accent:var(--green);}
+.panel:nth-child(3){outline:1px solid rgba(191,73,255,.16);outline-offset:-1px;}
+.panel:nth-child(4){--accent:#62a8ff;}
+.panel:nth-child(5){--accent:var(--amber);}
+.panel:nth-child(6){--accent:#b28aff;}
+.panel:nth-child(7){--accent:var(--cyan);}
+.panel-title::after{background:color-mix(in srgb,var(--accent) 8%,transparent);}
+
+#terminal,#alerts,#aiAnalysis{
+    border-color:rgba(132,154,151,.16);
+    background:
+        linear-gradient(rgba(64,223,192,.018) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(64,223,192,.018) 1px,transparent 1px),
+        rgba(4,10,14,.88);
+    background-size:24px 24px,24px 24px,auto;
+}
+
+#terminal:empty,#alerts:empty,#aiAnalysis:empty{
+    background:
+        radial-gradient(circle at 50% 45%,rgba(64,223,192,.065) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(64,223,192,.025) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(64,223,192,.025) 1px,transparent 1px),
+        rgba(4,10,14,.88);
+    background-size:auto,26px 26px,26px 26px,auto;
+}
+#alerts:empty{
+    background:
+        radial-gradient(circle at 50% 45%,rgba(255,95,109,.055) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(255,95,109,.018) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,95,109,.018) 1px,transparent 1px),
+        rgba(13,9,13,.88);
+    background-size:auto,26px 26px,26px 26px,auto;
+}
+
+.metric-card{
+    border-color:rgba(132,154,151,.18);
+    background:linear-gradient(145deg,rgba(8,17,22,.96),rgba(13,24,29,.9));
+}
+.metric-card:nth-child(1) .metric-value{color:var(--cyan);}
+.metric-card:nth-child(2) .metric-value{color:var(--red);}
+.metric-card:nth-child(3) .metric-value{color:var(--amber);}
+.metric-card:nth-child(4) .metric-value{color:#78b5ff;}
+.metric-card:nth-child(1)::after{border-color:rgba(64,223,192,.2);}
+.metric-card:nth-child(2)::after{border-color:rgba(255,95,109,.2);}
+.metric-card:nth-child(3)::after{border-color:rgba(242,184,75,.2);}
+.metric-card:nth-child(4)::after{border-color:rgba(120,181,255,.2);}
+
+.log-event{color:var(--cyan);}
+.log-user{color:#f2c46d;}
+.log-ip{color:#87b9ff;}
+.log-entry:hover{background:rgba(64,223,192,.045);box-shadow:inset 2px 0 var(--green);}
+.feed-box,#scanResults{
+    border-color:rgba(132,154,151,.17);
+    background:rgba(5,12,16,.7);
+}
+
+.alert{
+    border-color:rgba(255,95,109,.24);
+    border-left-color:var(--red);
+    background:rgba(77,20,28,.2);
+    color:#ffb2b7;
+}
+.alert.critical{border-color:rgba(255,95,109,.34);border-left-color:var(--red);background:rgba(77,20,28,.28);}
+.alert.high{border-color:rgba(242,184,75,.3);border-left-color:var(--amber);background:rgba(73,49,15,.22);color:#f6d69c;}
+.alert.medium{border-color:rgba(242,184,75,.2);border-left-color:#cf9e3f;background:rgba(55,42,18,.18);color:#dfc58f;}
+.ai-item{border-color:rgba(132,154,151,.18);border-left-color:var(--cyan);background:rgba(8,17,22,.9);}
+
+#targetInput{
+    border-color:rgba(132,154,151,.3);
+    background:#080f14;
+}
+#targetInput:focus{border-color:var(--green);box-shadow:0 0 0 2px rgba(163,245,106,.1);}
+#scanButton{
+    border-color:rgba(163,245,106,.52);
+    color:var(--green);
+    background:rgba(163,245,106,.07);
+}
+#scanButton:hover{background:var(--green);color:#0a120e;}
+
+.threat-progress{background:linear-gradient(90deg,var(--green),var(--amber),var(--red));}
+.map-box{
+    border-color:rgba(64,223,192,.2);
+    background:#080f13;
+}
+.map-box .leaflet-container{background:#080f13;filter:brightness(.78) saturate(.75) hue-rotate(12deg) contrast(1.12);}
+.map-overlay-banner{border-color:rgba(64,223,192,.28);background:rgba(7,15,19,.95);color:var(--green);}
+.map-legend{border-color:rgba(132,154,151,.2);background:rgba(7,15,19,.95);}
+.connection{border-color:rgba(132,154,151,.24);background:rgba(9,17,22,.96);}
+.online{color:var(--green);border-color:rgba(163,245,106,.4);}
+.offline{color:var(--amber);border-color:rgba(242,184,75,.38);}
+.footer{border-top-color:rgba(64,223,192,.14);background:rgba(8,15,20,.86);}
+
+::-webkit-scrollbar-track{background:#080f13;}
+::-webkit-scrollbar-thumb{background:#2a4947;}
+::-webkit-scrollbar-thumb:hover{background:#3d6d64;}
+
+/* Neon cyberpunk control-room backdrop */
+:root{
+    --ink:#070512;
+    --surface:#100d20;
+    --surface-raised:#17132b;
+    --line:#352752;
+    --line-bright:#604078;
+    --text:#f3efff;
+    --muted:#a59bbd;
+    --cyan:#20f6e2;
+    --amber:#ffd166;
+    --red:#ff365f;
+    --green:#a6ff00;
+    --shadow:0 16px 42px rgba(0,0,0,.38);
+}
+
+body{
+    background:
+        radial-gradient(ellipse at 12% 18%,rgba(0,105,255,.27),transparent 34%),
+        radial-gradient(ellipse at 88% 14%,rgba(255,31,153,.24),transparent 32%),
+        radial-gradient(ellipse at 73% 82%,rgba(112,36,255,.26),transparent 38%),
+        radial-gradient(ellipse at 5% 94%,rgba(18,255,196,.16),transparent 35%),
+        linear-gradient(135deg,#070512 0%,#0b081a 48%,#080612 100%);
+}
+
+body::before{
+    display:block;
+    z-index:0;
+    opacity:.72;
+    background:
+        radial-gradient(ellipse at 20% 45%,rgba(18,255,196,.065),transparent 28%),
+        radial-gradient(ellipse at 80% 55%,rgba(255,31,153,.06),transparent 30%),
+        linear-gradient(rgba(95,80,255,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(95,80,255,.035) 1px,transparent 1px);
+    background-size:auto,auto,38px 38px,38px 38px;
+}
+
+#cyberCanvas{
+    display:block;
+    z-index:0;
+    opacity:.42;
+    mix-blend-mode:screen;
+}
+
+.header,.workspace-ribbon,.overview,.main,.footer{
+    position:relative;
+    z-index:1;
+}
+
+.header{
+    border-bottom-color:rgba(32,246,226,.3);
+    background:linear-gradient(100deg,rgba(9,7,20,.93),rgba(17,9,30,.88));
+    box-shadow:0 8px 32px rgba(0,0,0,.18),0 1px rgba(32,246,226,.06);
+}
+
+.brand-eyebrow,.overview-kicker{color:var(--cyan);}
+.brand-eyebrow span{color:#ff4db8;}
+.logo-symbol{
+    color:var(--green);
+    text-shadow:0 0 8px rgba(166,255,0,.66),0 0 18px rgba(166,255,0,.25),0 0 20px rgba(191,73,255,.18);
+}
+.logo-muted{color:#c1b3da;}
+.brand-subtitle{color:#a89bbd;}
+
+.status:first-child{
+    border-color:rgba(166,255,0,.55);
+    color:var(--green);
+    background:rgba(89,157,27,.11);
+    box-shadow:0 0 12px rgba(166,255,0,.1),0 0 0 1px rgba(191,73,255,.14),inset 0 0 14px rgba(166,255,0,.04);
+}
+.status:nth-child(2){
+    border-color:rgba(32,246,226,.46);
+    color:var(--cyan);
+    background:rgba(0,143,166,.11);
+    box-shadow:0 0 16px rgba(32,246,226,.08),inset 0 0 14px rgba(32,246,226,.035);
+}
+
+.workspace-ribbon{
+    border-bottom-color:rgba(191,73,255,.27);
+    background:rgba(10,7,23,.85);
+}
+.ribbon-live,.ribbon-dot{color:var(--green);}
+.ribbon-dot{background:var(--green);box-shadow:0 0 10px rgba(166,255,0,.75),0 0 18px rgba(166,255,0,.36),0 0 0 2px rgba(191,73,255,.2);}
+.ribbon-item strong{color:#eee7ff;}
+.ribbon-item:nth-child(2) strong{color:#5bceff;}
+
+.overview{
+    background:
+        radial-gradient(ellipse at 78% 18%,rgba(191,73,255,.1),transparent 36%),
+        radial-gradient(ellipse at 14% 92%,rgba(32,246,226,.06),transparent 42%);
+}
+.overview-kicker{ text-shadow:0 0 12px rgba(32,246,226,.42);}
+.overview-kicker::before{background:var(--cyan);box-shadow:0 0 12px var(--cyan);}
+.overview h1{text-shadow:0 0 24px rgba(126,86,255,.2);}
+.overview-copy p{color:#b2a8c8;}
+.overview-status{
+    border-color:rgba(191,73,255,.42);
+    background:
+        radial-gradient(circle at 94% 7%,rgba(255,31,153,.17),transparent 44%),
+        radial-gradient(circle at 5% 100%,rgba(32,246,226,.1),transparent 48%),
+        linear-gradient(145deg,rgba(22,15,42,.94),rgba(12,11,30,.96));
+    box-shadow:0 15px 38px rgba(0,0,0,.3),0 0 30px rgba(191,73,255,.08);
+}
+.status-orbit{
+    color:var(--cyan);
+    border-color:rgba(32,246,226,.7);
+    box-shadow:0 0 18px rgba(32,246,226,.18),inset 0 0 18px rgba(32,246,226,.12);
+}
+.status-orbit::before{border-color:rgba(255,31,153,.32);}
+.status-orbit::after{border-color:rgba(166,255,0,.32);}
+.overview-status-label{color:#b3a2d1;}
+.overview-status-value{color:#fff;}
+.overview-status-meta{color:var(--green);}
+
+.overview-link{
+    border-color:rgba(131,109,166,.55);
+    color:#e9ddff;
+    background:rgba(18,12,36,.8);
+}
+.overview-link.primary{
+    border-color:rgba(32,246,226,.66);
+    color:var(--cyan);
+    background:rgba(0,190,186,.1);
+    box-shadow:inset 0 0 16px rgba(32,246,226,.04);
+}
+.overview-link:hover{
+    border-color:rgba(191,73,255,.62);
+    color:var(--green);
+    background:rgba(166,255,0,.1);
+    box-shadow:0 0 14px rgba(166,255,0,.12),0 0 0 1px rgba(191,73,255,.2);
+}
+
+.panel{
+    border-color:rgba(111,91,148,.38);
+    background:
+        radial-gradient(circle at 100% 0%,color-mix(in srgb,var(--accent) 10%,transparent),transparent 43%),
+        linear-gradient(145deg,rgba(17,13,34,.86),rgba(11,10,26,.89));
+    box-shadow:0 12px 36px rgba(0,0,0,.33),inset 0 1px rgba(255,255,255,.025);
+    backdrop-filter:blur(12px);
+}
+.panel::before{opacity:.85;box-shadow:0 0 18px var(--accent);}
+.panel:hover{
+    border-color:color-mix(in srgb,var(--accent) 58%,var(--line));
+    box-shadow:0 17px 42px rgba(0,0,0,.4),0 0 28px color-mix(in srgb,var(--accent) 14%,transparent);
+}
+.panel:nth-child(1){--accent:var(--cyan);}
+.panel:nth-child(2){--accent:var(--red);}
+.panel:nth-child(3){--accent:var(--green);}
+.panel:nth-child(4){--accent:#438dff;}
+.panel:nth-child(5){--accent:var(--amber);}
+.panel:nth-child(6){--accent:#bf49ff;}
+.panel:nth-child(7){--accent:#ff4db8;}
+.panel-title{color:#f4edff;}
+.panel-title::after{
+    border-color:color-mix(in srgb,var(--accent) 48%,transparent);
+    color:var(--accent);
+    background:color-mix(in srgb,var(--accent) 10%,transparent);
+    box-shadow:0 0 12px color-mix(in srgb,var(--accent) 10%,transparent);
+}
+
+#terminal,#alerts,#aiAnalysis{
+    border-color:rgba(116,93,154,.32);
+    background:
+        linear-gradient(rgba(42,224,213,.032) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(42,224,213,.032) 1px,transparent 1px),
+        rgba(5,5,17,.83);
+    background-size:24px 24px,24px 24px,auto;
+}
+#terminal:empty{
+    background:
+        radial-gradient(circle at 50% 45%,rgba(32,246,226,.1) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(32,246,226,.045) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(32,246,226,.045) 1px,transparent 1px),
+        rgba(5,5,17,.87);
+    background-size:auto,24px 24px,24px 24px,auto;
+}
+#alerts:empty{
+    background:
+        radial-gradient(circle at 50% 45%,rgba(255,54,95,.09) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(255,54,95,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(255,54,95,.035) 1px,transparent 1px),
+        rgba(15,5,18,.88);
+    background-size:auto,24px 24px,24px 24px,auto;
+}
+#aiAnalysis:empty{
+    background:
+        radial-gradient(circle at 50% 45%,rgba(191,73,255,.09) 0 1px,transparent 2px 100px),
+        linear-gradient(rgba(191,73,255,.035) 1px,transparent 1px),
+        linear-gradient(90deg,rgba(191,73,255,.035) 1px,transparent 1px),
+        rgba(9,5,20,.88);
+    background-size:auto,24px 24px,24px 24px,auto;
+}
+#terminal:empty::after{border-color:rgba(32,246,226,.24);box-shadow:0 0 0 18px rgba(32,246,226,.035),0 0 0 38px rgba(32,246,226,.025);}
+#alerts:empty::after{border-color:rgba(255,54,95,.23);box-shadow:0 0 0 18px rgba(255,54,95,.035),0 0 0 38px rgba(255,54,95,.025);}
+#aiAnalysis:empty::after{border-color:rgba(191,73,255,.24);box-shadow:0 0 0 18px rgba(191,73,255,.035),0 0 0 38px rgba(191,73,255,.025);}
+#terminal:empty::before{color:#54ead7;}
+#alerts:empty::before{color:#ff708e;}
+#aiAnalysis:empty::before{color:#d785ff;}
+
+.log-entry{border-bottom-color:rgba(112,91,146,.22);color:#e7e0f3;}
+.log-time{color:#9c8eb6;}
+.log-event{color:var(--cyan);text-shadow:0 0 10px rgba(32,246,226,.2);}
+.log-user{color:#ffbf69;}
+.log-ip{color:#6fb5ff;}
+.log-entry:hover{background:rgba(32,246,226,.07);box-shadow:inset 2px 0 var(--cyan);}
+
+.metric-card{
+    border-color:rgba(119,97,155,.35);
+    background:linear-gradient(145deg,rgba(11,8,27,.92),rgba(22,14,39,.85));
+}
+.metric-card:nth-child(1) .metric-value{color:var(--cyan);text-shadow:0 0 18px rgba(32,246,226,.28);}
+.metric-card:nth-child(2) .metric-value{color:var(--red);text-shadow:0 0 18px rgba(255,54,95,.25);}
+.metric-card:nth-child(3) .metric-value{color:var(--amber);}
+.metric-card:nth-child(4) .metric-value{color:#6bb3ff;text-shadow:0 0 18px rgba(67,141,255,.25);}
+.metric-card:nth-child(1)::after{border-color:rgba(32,246,226,.28);}
+.metric-card:nth-child(2)::after{border-color:rgba(255,54,95,.28);}
+.metric-card:nth-child(3)::after{border-color:rgba(255,209,102,.26);}
+.metric-card:nth-child(4)::after{border-color:rgba(67,141,255,.3);}
+.metric-title{color:#a99bbb;}
+
+.feed-box,#scanResults{
+    border-color:rgba(119,97,155,.34);
+    background:rgba(6,5,19,.82);
+}
+.feed-item{border-bottom-color:rgba(119,97,155,.2);color:#b5a9c9;}
+.feed-ioc{color:var(--amber);}
+.feed-high{color:#ff9f68;}
+.feed-crit{color:var(--red);}
+.ai-item{
+    border-color:rgba(191,73,255,.28);
+    border-left-color:#bf49ff;
+    background:rgba(14,8,29,.9);
+}
+
+.alert{
+    border-color:rgba(255,54,95,.36);
+    border-left-color:var(--red);
+    background:rgba(83,9,38,.32);
+    color:#ffb3c4;
+    box-shadow:0 8px 24px rgba(255,54,95,.07);
+}
+.alert.high{border-color:rgba(255,171,66,.38);border-left-color:#ffad42;background:rgba(82,44,5,.28);color:#ffd596;}
+.alert.medium{border-color:rgba(255,209,102,.26);border-left-color:var(--amber);background:rgba(73,51,12,.22);color:#f2d793;}
+
+#targetInput{
+    border-color:rgba(117,89,158,.52);
+    background:rgba(6,5,18,.9);
+    color:#f3efff;
+}
+#targetInput:focus{border-color:var(--cyan);box-shadow:0 0 0 2px rgba(32,246,226,.12),0 0 18px rgba(32,246,226,.1);}
+#scanButton{
+    border-color:rgba(166,255,0,.58);
+    color:var(--green);
+    background:rgba(166,255,0,.09);
+    box-shadow:0 0 12px rgba(166,255,0,.08),0 0 0 1px rgba(191,73,255,.15);
+}
+#scanButton:hover{border-color:rgba(191,73,255,.72);background:var(--green);box-shadow:0 0 18px rgba(166,255,0,.24),0 0 0 1px rgba(191,73,255,.24);}
+
+.threat-bar{border-color:rgba(119,97,155,.4);background:#100b20;}
+.threat-progress{background:linear-gradient(90deg,var(--green),var(--cyan),#438dff,#bf49ff,var(--red));box-shadow:0 0 12px rgba(191,73,255,.35);}
+.map-box{
+    border-color:rgba(255,77,184,.35);
+    box-shadow:inset 0 0 45px rgba(0,0,0,.5),0 0 24px rgba(191,73,255,.12);
+}
+.map-box .leaflet-container{filter:brightness(.75) saturate(1.1) hue-rotate(20deg) contrast(1.12);}
+.map-overlay-banner{border-color:rgba(32,246,226,.44);color:var(--cyan);box-shadow:0 0 16px rgba(32,246,226,.08);}
+.map-legend{border-color:rgba(191,73,255,.34);color:#d4c7e8;}
+.map-overlay-banner{
+    display:flex;
+    align-items:center;
+    gap:8px;
+}
+.map-live-dot{
+    width:7px;
+    height:7px;
+    flex:0 0 7px;
+    border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 8px rgba(166,255,0,.76),0 0 0 2px rgba(191,73,255,.2);
+    animation:mapLiveBlink 1.5s ease-in-out infinite;
+}
+.map-point-count{
+    min-width:20px;
+    padding:2px 5px;
+    border:1px solid rgba(32,246,226,.38);
+    border-radius:999px;
+    color:#fff;
+    background:rgba(32,246,226,.12);
+    text-align:center;
+}
+.legend-note{
+    margin-top:8px;
+    padding-top:7px;
+    border-top:1px solid rgba(191,73,255,.2);
+    color:#a99bbb;
+    font-size:9px;
+    line-height:1.5;
+}
+.map-event-icon{
+    border:0;
+    background:transparent;
+}
+.map-point-pulse{
+    --point-color:#ffb547;
+    position:absolute;
+    inset:4px;
+    display:grid;
+    place-items:center;
+    border:1px solid color-mix(in srgb,var(--point-color) 80%,transparent);
+    border-radius:50%;
+    background:color-mix(in srgb,var(--point-color) 15%,transparent);
+    box-shadow:0 0 12px color-mix(in srgb,var(--point-color) 65%,transparent);
+}
+.map-point-pulse::before{
+    content:'';
+    position:absolute;
+    inset:-5px;
+    border:1px solid color-mix(in srgb,var(--point-color) 62%,transparent);
+    border-radius:50%;
+    animation:mapPointPulse 1.8s ease-out infinite;
+}
+.map-point-pulse i{
+    width:7px;
+    height:7px;
+    border-radius:50%;
+    background:var(--point-color);
+    box-shadow:0 0 10px var(--point-color),0 0 18px color-mix(in srgb,var(--point-color) 65%,transparent);
+}
+.map-point-pulse.attack{--point-color:#ff365f;}
+.map-point-pulse.threat{--point-color:#ffb547;}
+.leaflet-popup-content-wrapper,.leaflet-popup-tip{
+    border:1px solid rgba(191,73,255,.4);
+    background:#100b20;
+    color:#f3efff;
+    box-shadow:0 0 20px rgba(191,73,255,.14);
+}
+.leaflet-popup-content{font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1.6;}
+.leaflet-container a.leaflet-popup-close-button{color:#20f6e2;}
+@keyframes mapPointPulse{
+    0%{transform:scale(.55);opacity:.9;}
+    100%{transform:scale(1.8);opacity:0;}
+}
+@keyframes mapLiveBlink{
+    0%,100%{opacity:.5;}
+    50%{opacity:1;}
+}
+.scan-assessment-note{
+    margin-top:8px;
+    padding:9px 10px;
+    border-left:2px solid #bf49ff;
+    background:rgba(191,73,255,.08);
+    color:#c6b6dc;
+    font:10px/1.55 'IBM Plex Mono',monospace;
+}
+.connection{
+    border-color:rgba(67,141,255,.48);
+    background:rgba(10,7,25,.96);
+    box-shadow:0 8px 26px rgba(0,0,0,.42),0 0 18px rgba(67,141,255,.11);
+}
+.online{color:var(--green);border-color:rgba(166,255,0,.5);box-shadow:0 0 10px rgba(166,255,0,.08),0 0 0 1px rgba(191,73,255,.14);}
+.offline{color:var(--amber);border-color:rgba(255,209,102,.45);}
+.footer{border-top-color:rgba(191,73,255,.28);background:rgba(8,6,20,.91);}
+::-webkit-scrollbar-track{background:#080615;}
+::-webkit-scrollbar-thumb{background:#49305f;}
+::-webkit-scrollbar-thumb:hover{background:#714b91;}
+
+@media(prefers-reduced-motion:reduce){
+    #cyberCanvas{display:none;}
+    .map-point-pulse::before,.map-live-dot{animation:none;}
+}
+
+/* Subtle accent-matched interaction glow */
+.panel{
+    transition:
+        transform .22s ease,
+        border-color .22s ease,
+        box-shadow .22s ease,
+        background-color .22s ease;
+}
+
+.metric-card,
+.alert,
+.feed-item,
+.ai-item,
+.overview-status,
+.status,
+.overview-link,
+#scanButton,
+#targetInput,
+.map-box{
+    transition:
+        transform .2s ease,
+        border-color .2s ease,
+        box-shadow .2s ease,
+        background-color .2s ease,
+        filter .2s ease;
+}
+
+.metric-card:nth-child(1){--block-glow:32,246,226;}
+.metric-card:nth-child(2){--block-glow:255,54,95;}
+.metric-card:nth-child(3){--block-glow:255,209,102;}
+.metric-card:nth-child(4){--block-glow:67,141,255;}
+.alert{--block-glow:255,54,95;}
+.alert.high{--block-glow:255,173,66;}
+.alert.medium{--block-glow:255,209,102;}
+.ai-item{--block-glow:191,73,255;}
+.feed-item{--block-glow:67,141,255;}
+.feed-item:nth-child(3n + 1){--block-glow:32,246,226;}
+.feed-item:nth-child(3n + 2){--block-glow:255,77,184;}
+
+@media (hover:hover){
+    .panel:hover{
+        transform:translateY(-3px);
+        box-shadow:
+            0 18px 44px rgba(0,0,0,.4),
+            0 0 28px color-mix(in srgb,var(--accent) 19%,transparent),
+            inset 0 0 26px color-mix(in srgb,var(--accent) 5%,transparent);
+    }
+
+    .panel:hover::before{
+        opacity:1;
+        filter:brightness(1.4);
+    }
+
+    .metric-card:hover,
+    .alert:hover,
+    .ai-item:hover,
+    .feed-item:hover{
+        transform:translateY(-2px);
+        border-color:rgba(var(--block-glow),.58);
+        box-shadow:
+            0 7px 22px rgba(var(--block-glow),.12),
+            0 0 16px rgba(var(--block-glow),.13),
+            inset 0 0 18px rgba(var(--block-glow),.055);
+    }
+
+    .feed-item:hover{
+        padding-left:8px;
+        border-radius:4px;
+        background:rgba(var(--block-glow),.055);
+    }
+
+    .overview-status:hover{
+        border-color:rgba(191,73,255,.68);
+        box-shadow:
+            0 16px 42px rgba(0,0,0,.34),
+            0 0 26px rgba(191,73,255,.19),
+            inset 0 0 22px rgba(32,246,226,.06);
+    }
+
+    .status:first-child:hover{
+        box-shadow:0 0 16px rgba(166,255,0,.18),0 0 0 1px rgba(191,73,255,.24),inset 0 0 14px rgba(166,255,0,.08);
+    }
+
+    .panel:nth-child(3):hover{
+        border-color:rgba(191,73,255,.4);
+        box-shadow:0 17px 42px rgba(0,0,0,.4),0 0 22px rgba(166,255,0,.12),0 0 0 1px rgba(191,73,255,.2);
+    }
+
+    .status:nth-child(2):hover{
+        box-shadow:0 0 20px rgba(32,246,226,.2),inset 0 0 14px rgba(32,246,226,.08);
+    }
+
+    .map-box:hover{
+        border-color:rgba(255,77,184,.68);
+        box-shadow:
+            inset 0 0 45px rgba(0,0,0,.5),
+            0 0 24px rgba(191,73,255,.16),
+            0 0 18px rgba(255,77,184,.14);
+    }
+}
+
+.overview-link:focus-visible,
+#scanButton:focus-visible,
+#targetInput:focus-visible{
+    outline:2px solid var(--cyan);
+    outline-offset:3px;
+    box-shadow:0 0 22px rgba(32,246,226,.22);
+}
+
+@media(prefers-reduced-motion:reduce){
+    .panel,.metric-card,.alert,.feed-item,.ai-item,.overview-status,.status,
+    .overview-link,#scanButton,#targetInput,.map-box{
+        transition:none;
+    }
+}
+
+/* Refined parrot-green accents with restrained violet edging */
+.brand-eyebrow,.overview-kicker{
+    color:var(--green);
+    text-shadow:0 0 12px rgba(166,255,0,.2);
+}
+.overview-kicker{
+    width:fit-content;
+    padding:7px 10px;
+    border:1px solid rgba(166,255,0,.2);
+    border-radius:4px;
+    background:linear-gradient(100deg,rgba(166,255,0,.08),rgba(191,73,255,.06));
+    box-shadow:0 0 16px rgba(166,255,0,.045),inset 0 0 12px rgba(191,73,255,.04);
+}
+.overview-kicker::before{
+    background:var(--green);
+    box-shadow:0 0 9px rgba(166,255,0,.8);
+}
+.overview-status{
+    border-color:rgba(166,255,0,.27);
+    box-shadow:0 14px 36px rgba(0,0,0,.3),0 0 0 1px rgba(191,73,255,.16),0 0 22px rgba(166,255,0,.07);
+}
+.status-orbit{
+    color:var(--green);
+    border-color:rgba(166,255,0,.62);
+    box-shadow:0 0 16px rgba(166,255,0,.16),0 0 0 3px rgba(191,73,255,.09),inset 0 0 15px rgba(166,255,0,.09);
+}
+.overview-status-meta{
+    color:var(--green);
+    text-shadow:0 0 10px rgba(166,255,0,.18);
+}
+.panel:nth-child(3){
+    border-color:rgba(166,255,0,.23);
+    box-shadow:0 12px 36px rgba(0,0,0,.33),0 0 0 1px rgba(191,73,255,.12),inset 0 1px rgba(255,255,255,.025);
+}
+.panel:nth-child(3) .panel-title::after{
+    border-color:rgba(166,255,0,.38);
+    background:rgba(166,255,0,.07);
+    box-shadow:0 0 12px rgba(166,255,0,.07),0 0 0 1px rgba(191,73,255,.12);
+}
+.ribbon-live{
+    text-shadow:0 0 12px rgba(166,255,0,.22);
+}
+.overview-link.primary{
+    border-color:rgba(166,255,0,.45);
+    color:var(--green);
+    background:linear-gradient(110deg,rgba(166,255,0,.1),rgba(191,73,255,.07));
+    box-shadow:0 0 14px rgba(166,255,0,.06),inset 0 0 12px rgba(191,73,255,.04);
+}
+.overview-link.primary:hover{
+    border-color:rgba(191,73,255,.6);
+    background:linear-gradient(110deg,rgba(166,255,0,.16),rgba(191,73,255,.12));
+    box-shadow:0 0 18px rgba(166,255,0,.12),0 0 0 1px rgba(191,73,255,.16);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<canvas id="cyberCanvas"
+    aria-hidden="true"></canvas>
+
+<div class="header">
+
+    <div class="brand-lockup">
+
+        <div class="brand-eyebrow">
+            SECURESCAN XDR <span>/</span> OPERATIONS CENTER
+        </div>
+
+        <div class="logo">
+            <span class="logo-symbol">◈</span>
+            SecureScan <span class="logo-muted">Command Center</span>
+        </div>
+
+        <div class="brand-subtitle">
+            Autonomous detection, triage, and live response telemetry
+        </div>
+
+    </div>
+
+    <div class="status-bar">
+
+        <div class="status">
+            🟢 SYSTEM ONLINE
+        </div>
+
+        <div class="status">
+            ⚡ REAL-TIME MONITORING
+        </div>
+
+    </div>
+
+</div>
+
+<div class="workspace-ribbon">
+
+    <div class="ribbon-item ribbon-live">
+        <span class="ribbon-dot"></span>
+        <span>LIVE OPERATIONS</span>
+    </div>
+
+    <div class="ribbon-item">
+        <span class="ribbon-label">MODE</span>
+        <strong>DETECTION + RESPONSE</strong>
+    </div>
+
+    <div class="ribbon-item">
+        <span class="ribbon-label">WINDOW</span>
+        <strong>10 SEC CORRELATION</strong>
+    </div>
+
+    <div class="ribbon-item ribbon-spacer"></div>
+
+    <div class="ribbon-item">
+        <span class="ribbon-label">LAST SYNC</span>
+        <strong id="lastSync">--:--:--</strong>
+    </div>
+
+</div>
+
+<section class="overview" aria-label="Security operations overview">
+
+    <div class="overview-copy">
+        <div class="overview-kicker">Security operations / overview</div>
+        <h1>Threat operations,<br>at a glance.</h1>
+        <p>Monitor incoming telemetry, investigate security alerts, and review threat activity from one live command center.</p>
+        <div class="overview-actions">
+            <a class="overview-link primary" href="#terminal">View live activity <span aria-hidden="true">&nbsp;→</span></a>
+            <a class="overview-link" href="#targetInput">Scan a target <span aria-hidden="true">&nbsp;↗</span></a>
+        </div>
+    </div>
+
+    <div class="overview-status" aria-live="polite">
+        <div class="status-orbit" aria-hidden="true">◈</div>
+        <div>
+            <div class="overview-status-label">Telemetry status</div>
+            <div class="overview-status-value" id="overviewStatusValue">Connecting…</div>
+            <div class="overview-status-meta"><span id="overviewStatusMeta">CONNECTING</span> · LAST CHECK <span id="overviewSync">--:--:--</span></div>
+        </div>
+    </div>
+
+</section>
+
+<div class="connection"
+     id="connectionStatus">
+
+    🔴 Connecting...
+
+</div>
+
+<div class="main">
+
+<!-- ======================================================
+     LIVE LOGS
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        📜 Live Log Stream
+    </div>
+
+    <div id="terminal"></div>
+
+</div>
+
+
+<!-- ======================================================
+     ALERTS
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🚨 Security Alerts
+    </div>
+
+    <div id="alerts"></div>
+
+</div>
+
+
+<!-- ======================================================
+     THREAT INTELLIGENCE
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🧠 Threat Intelligence
+    </div>
+
+    <div class="metrics">
+
+        <div class="metric-card">
+
+            <div class="metric-title">
+                Total Alerts
+            </div>
+
+            <div class="metric-value"
+                 id="totalAlerts">
+
+                0
+
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-title">
+                Critical Events
+            </div>
+
+            <div class="metric-value"
+                 id="criticalEvents">
+
+                0
+
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-title">
+                Threat Score
+            </div>
+
+            <div class="metric-value"
+                 id="threatScore">
+
+                0
+
+            </div>
+
+        </div>
+
+        <div class="metric-card">
+
+            <div class="metric-title">
+                Active IPs
+            </div>
+
+            <div class="metric-value"
+                 id="activeIPs">
+
+                0
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="threat-section">
+
+        <h3 style="margin-bottom:15px;">
+            🔥 Threat Level
+        </h3>
+
+        <div class="threat-bar">
+
+            <div class="threat-progress"
+                 id="threatBar">
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     THREAT FEED
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🌐 Threat Feed
+    </div>
+
+    <div class="feed-box">
+
+        <div class="feed-item">
+            Waiting for live threat events...
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- ======================================================
+     SCANNER
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🌐 Vulnerability Scanner
+    </div>
+
+    <input
+        type="text"
+        id="targetInput"
+        placeholder="Enter IP or Domain"
+    >
+
+    <button
+        id="scanButton"
+        onclick="startScan()">
+
+        Start Scan
+
+    </button>
+
+    <div id="scanResults"></div>
+
+</div>
+
+
+<!-- ======================================================
+     AI
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🤖 AI Threat Analysis
+    </div>
+
+    <div id="aiAnalysis"></div>
+
+</div>
+
+
+<!-- ======================================================
+     MAP
+====================================================== -->
+
+<div class="panel">
+
+    <div class="panel-title">
+        🌏 Global Attack Map
+    </div>
+
+    <div class="map-box">
+
+        <div class="map-overlay-banner">
+            <span class="map-live-dot" aria-hidden="true"></span>
+            LIVE EVENT POINTS
+            <span class="map-point-count" id="mapPointCount" aria-live="polite">0</span>
+        </div>
+
+        <div id="forced-siem-map-viewport"></div>
+
+        <div class="map-legend">
+
+            <div class="legend-row">
+                🔴 High / critical event
+            </div>
+
+            <div class="legend-row">
+                🟠 Other security event
+            </div>
+
+            <div class="legend-note">
+                Illustrative points only.<br>
+                Source IP geolocation is not configured.
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+</div>
+
+
+<div class="footer">
+
+    SecureScan XDR |
+    AI-Powered Security Monitoring
+
+</div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+/* ============================================================
+   CYBER BACKGROUND
+============================================================ */
+
+(function(){
+
+    const canvas = document.getElementById("cyberCanvas");
+
+    if(!canvas){
+
+        return;
+
+    }
+
+    const context = canvas.getContext("2d");
+    const glyphs = "01ABCDEF<>[]{}//::#$%";
+    const neonColors = [
+        "rgba(166,255,0,.52)",
+        "rgba(32,246,226,.42)",
+        "rgba(67,141,255,.38)",
+        "rgba(255,77,184,.42)",
+        "rgba(191,73,255,.42)",
+        "rgba(255,54,95,.38)"
+    ];
+    let columns = [];
+    let width = 0;
+    let height = 0;
+    let fontSize = 13;
+
+    function resize(){
+
+        const ratio = window.devicePixelRatio || 1;
+
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = width * ratio;
+        canvas.height = height * ratio;
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        columns = Array.from(
+            {length: Math.ceil(width / fontSize)},
+            function(){
+                return Math.random() * (height / fontSize);
+            }
+        );
+
+    }
+
+    function draw(){
+
+        context.fillStyle = "rgba(7, 5, 18, .12)";
+        context.fillRect(0, 0, width, height);
+        context.font = fontSize + "px IBM Plex Mono, monospace";
+
+        columns.forEach(function(y, index){
+
+            const x = index * fontSize;
+            const bright = Math.random() > .72;
+            context.fillStyle = bright
+                ? neonColors[Math.floor(Math.random() * neonColors.length)]
+                : "rgba(100,150,210,.24)";
+            context.fillText(
+                glyphs[Math.floor(Math.random() * glyphs.length)],
+                x,
+                y * fontSize
+            );
+
+            if(y * fontSize > height && Math.random() > .975){
+
+                columns[index] = 0;
+
+            }
+
+            columns[index] += .34;
+
+        });
+
+        requestAnimationFrame(draw);
+
+    }
+
+    resize();
+    window.addEventListener("resize", resize);
+    draw();
+
+})();
+
+/* ============================================================
+   SOCKET.IO
+============================================================ */
+
+const socket = typeof io === "function"
+    ? io(
+        window.location.origin,
+        {
+            transports: ["polling", "websocket"],
+            reconnection: true,
+            reconnectionAttempts: Infinity
+        }
+    )
+    : {
+        on: function(){},
+        connected: false
+    };
+
+if(typeof io !== "function"){
+
+    document.getElementById(
+        "connectionStatus"
+    ).innerHTML =
+        "🟡 Live polling active; socket unavailable";
+
+    document.getElementById(
+        "connectionStatus"
+    ).className =
+        "connection offline";
+
+}
+
+
+/* ============================================================
+   ELEMENTS
+============================================================ */
+
+const terminal =
+    document.getElementById("terminal");
+
+const alerts =
+    document.getElementById("alerts");
+
+const aiAnalysis =
+    document.getElementById("aiAnalysis");
+
+const connectionStatus =
+    document.getElementById(
+        "connectionStatus"
+    );
+
+function updateOverviewStatus(status, detail){
+
+    const statusNode = document.getElementById("overviewStatusValue");
+    const detailNode = document.getElementById("overviewStatusMeta");
+
+    if(statusNode){
+        statusNode.innerText = status;
+    }
+
+    if(detailNode){
+        detailNode.innerText = detail;
+    }
+
+}
+
+
+/* ============================================================
+   STATE
+============================================================ */
+
+let totalAlerts = 0;
+
+let criticalEvents = 0;
+
+let threatScore = 0;
+
+const activeIPs = new Set();
+
+let mapObj = null;
+
+const pendingMapEvents = [];
+
+const liveAttackLayers = [];
+
+const MAX_MAP_POINTS = 60;
+
+let mapMotionTimer = null;
+
+const seenLogIds = new Set();
+
+let lastLogId = 0;
+
+const clientFailTimes = new Map();
+
+const clientBruteForceShown = new Set();
+
+
+/* ============================================================
+   SOCKET STATUS
+============================================================ */
+
+socket.on("connect", function(){
+
+    console.log(
+        "🟢 SOCKET CONNECTED",
+        socket.id
+    );
+
+    connectionStatus.innerHTML =
+        "🟢 Dashboard Connected";
+
+    connectionStatus.className =
+        "connection online";
+
+    updateOverviewStatus("Connected", "SOCKET.IO · LIVE");
+
+});
+
+
+socket.on("disconnect", function(){
+
+    console.log(
+        "🔴 SOCKET DISCONNECTED"
+    );
+
+    connectionStatus.innerHTML =
+        "🔴 Socket Disconnected";
+
+    connectionStatus.className =
+        "connection offline";
+
+    updateOverviewStatus("Reconnecting", "WAITING FOR SOCKET");
+
+});
+
+
+socket.on("connect_error", function(error){
+
+    console.error(
+        "Socket connection error:",
+        error
+    );
+
+    connectionStatus.innerHTML =
+        "🟡 Live polling active; socket reconnecting";
+
+    connectionStatus.className =
+        "connection offline";
+
+    updateOverviewStatus("Polling fallback", "SOCKET RECONNECTING");
+
+});
+
+
+/* ============================================================
+   MAP
+============================================================ */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function(){
+
+        const node =
+            document.getElementById(
+                "forced-siem-map-viewport"
+            );
+
+        if(!node){
+
+            console.error(
+                "❌ Map container missing"
+            );
+
+            return;
+        }
+
+        if(typeof L === "undefined"){
+
+            node.innerHTML =
+                "<div style='padding:20px;color:#ff4a4a;'>Map library could not be loaded. Check the network connection and refresh.</div>";
+
+            console.error("Leaflet failed to load");
+
+            return;
+        }
+
+        mapObj = L.map(
+            "forced-siem-map-viewport",
+            {
+                zoomControl:true,
+                attributionControl:true,
+                dragging:false,
+                scrollWheelZoom:true,
+                doubleClickZoom:true,
+                touchZoom:true
+            }
+        ).setView(
+            [20,0],
+            2
+        );
+
+        mapObj.dragging.disable();
+
+        L.tileLayer(
+            "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+            {
+                maxZoom:18,
+                minZoom:1,
+                attribution:
+                    "Tiles &copy; Esri"
+            }
+        ).addTo(mapObj);
+
+        setTimeout(
+            function(){
+
+                mapObj.invalidateSize(
+                    true
+                );
+
+            },
+            500
+        );
+
+        console.log(
+            "🌍 MAP INITIALIZED"
+        );
+
+        startMapMotion();
+
+        while(pendingMapEvents.length){
+
+            generateAttackMarker(
+                ...pendingMapEvents.shift()
+            );
+
+        }
+
+    }
+);
+
+
+function startMapMotion(){
+
+    if(!mapObj || mapMotionTimer){
+
+        return;
+
+    }
+
+    mapMotionTimer = setInterval(
+        function(){
+
+            if(!mapObj){
+
+                return;
+
+            }
+
+            mapObj.panBy(
+                [.8, 0],
+                {
+                    animate:false,
+                    noMoveStart:true
+                }
+            );
+
+        },
+        50
+    );
+
+}
+
+
+/* ============================================================
+   MAP MARKER
+============================================================ */
+
+function generateAttackMarker(
+    latitude,
+    longitude,
+    event,
+    username,
+    ip,
+    persist = true,
+    severity = ""
+){
+
+    if(!mapObj){
+
+        pendingMapEvents.push([
+            latitude,
+            longitude,
+            event,
+            username,
+            ip,
+            persist,
+            severity
+        ]);
+
+        return;
+    }
+
+    const severityLevel = String(severity).toUpperCase();
+    const isAttack = ["HIGH", "CRITICAL"].includes(severityLevel) ||
+        /RANSOMWARE|MALWARE|YARA|BRUTE.?FORCE|ATTACK|EXPLOIT/i.test(String(event));
+    const pointClass = isAttack ? "attack" : "threat";
+    const pointLabel = isAttack ? "HIGH / CRITICAL EVENT" : "SECURITY EVENT";
+    const pointColor = isAttack ? "#ff365f" : "#ffb547";
+
+    if(
+        !Number.isFinite(latitude) ||
+        !Number.isFinite(longitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180
+    ){
+        console.warn("Skipping map point with invalid coordinates");
+        return;
+    }
+
+    const marker = L.marker(
+        [latitude, longitude],
+        {
+            icon: L.divIcon({
+                className: "map-event-icon",
+                html: `<span class="map-point-pulse ${pointClass}" aria-hidden="true"><i></i></span>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            }),
+            keyboard: true,
+            title: `${pointLabel}: ${event}`
+        }
+    ).addTo(mapObj);
+
+    marker.bindPopup(`
+
+        <b style="color:${pointColor};">
+            ${isAttack ? "🚨" : "⚠️"} ${pointLabel}
+        </b>
+
+        <br>
+
+        ${escapeHtml(event)}
+
+        <br><br>
+
+        Severity: ${escapeHtml(severityLevel || "UNCLASSIFIED")}
+
+        <br>
+
+        👤 ${escapeHtml(username)}
+
+        <br>
+
+        🌐 ${escapeHtml(ip)}
+
+        <br><br>
+
+        <small>Illustrative map point. Source IP geolocation is not configured.</small>
+
+    `);
+
+    liveAttackLayers.push({
+        marker: marker
+    });
+
+    while(liveAttackLayers.length > MAX_MAP_POINTS){
+
+        const oldest = liveAttackLayers.shift();
+
+        if(mapObj.hasLayer(oldest.marker)){
+            mapObj.removeLayer(oldest.marker);
+        }
+
+    }
+
+    updateMapPointCount();
+
+    if(!persist){
+
+        setTimeout(
+            function(){
+                if(
+                    mapObj &&
+                    mapObj.hasLayer(marker)
+                ){
+                    mapObj.removeLayer(
+                        marker
+                    );
+                }
+
+                const markerIndex = liveAttackLayers.findIndex(function(layer){
+                    return layer.marker === marker;
+                });
+                if(markerIndex !== -1){
+                    liveAttackLayers.splice(markerIndex, 1);
+                }
+
+                updateMapPointCount();
+
+            },
+            30000
+        );
+
+    }
+}
+
+function updateMapPointCount(){
+    const countNode = document.getElementById("mapPointCount");
+    if(countNode){
+        countNode.innerText = String(liveAttackLayers.length);
+    }
+}
+
+function getIllustrativeCoordinates(ip, event){
+    function hash(value){
+        let result = 2166136261;
+        const text = String(value || "unknown");
+
+        for(let index = 0; index < text.length; index++){
+            result ^= text.charCodeAt(index);
+            result = Math.imul(result, 16777619);
+        }
+
+        return result >>> 0;
+    }
+
+    const sourceHash = hash(ip);
+    const eventHash = hash(event);
+    const latitude = -48 + (sourceHash % 12600) / 100 +
+        (((eventHash % 201) - 100) / 100);
+    const longitude = -175 + ((Math.floor(sourceHash / 12600) % 35000) / 100) +
+        (((Math.floor(eventHash / 201) % 201) - 100) / 100);
+
+    return [
+        Math.max(-55, Math.min(75, latitude)),
+        Math.max(-179, Math.min(179, longitude))
+    ];
+}
+
+
+/* ============================================================
+   ESCAPE HTML
+============================================================ */
+
+function escapeHtml(value){
+
+    return String(value)
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
+}
+
+
+/* ============================================================
+   DISPLAY LOG
+============================================================ */
+
+function displayLog(
+    event,
+    username,
+    ip,
+    timestamp
+){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "log-entry";
+
+    div.innerHTML = `
+
+        <span class="log-time">
+            [${escapeHtml(timestamp)}]
+        </span>
+
+        &nbsp;
+
+        <span class="log-event">
+            ${escapeHtml(event)}
+        </span>
+
+        &nbsp;|
+
+        <span class="log-user">
+            ${escapeHtml(username)}
+        </span>
+
+        &nbsp;|
+
+        <span class="log-ip">
+            ${escapeHtml(ip)}
+        </span>
+
+    `;
+
+    terminal.prepend(div);
+
+    while(
+        terminal.children.length > 100
+    ){
+
+        terminal.removeChild(
+            terminal.lastChild
+        );
+
+    }
+}
+
+
+/* ============================================================
+   LOG EVENT
+============================================================ */
+
+socket.on(
+    "log",
+    handleLog
+);
+
+
+function handleLog(data){
+
+        console.log(
+            "📥 LOG RECEIVED:",
+            data
+        );
+
+        const syncNode = document.getElementById("lastSync");
+
+        if(syncNode){
+
+            syncNode.innerText = new Date().toLocaleTimeString();
+
+        }
+
+        const overviewSyncNode = document.getElementById("overviewSync");
+
+        if(overviewSyncNode){
+
+            overviewSyncNode.innerText = new Date().toLocaleTimeString();
+
+        }
+
+        if(data && typeof data === "object" && data.id){
+
+            if(seenLogIds.has(data.id)){
+
+                return;
+
+            }
+
+            seenLogIds.add(data.id);
+            lastLogId = Math.max(lastLogId, data.id);
+
+        }
+
+        let event;
+
+        let username;
+
+        let ip;
+
+        let timestamp =
+            new Date().toLocaleTimeString();
+
+
+        /*
+         * Current backend sends:
+         *
+         * EVENT|USERNAME|IP
+         */
+
+        if(
+            typeof data === "string"
+        ){
+
+            const parts =
+                data.split("|");
+
+            if(
+                parts.length !== 3
+            ){
+
+                console.error(
+                    "❌ Invalid log:",
+                    data
+                );
+
+                return;
+            }
+
+            event =
+                parts[0].trim();
+
+            username =
+                parts[1].trim();
+
+            ip =
+                parts[2].trim();
+
+        }
+
+        /*
+         * Also support object payloads
+         * for future upgrades.
+         */
+
+        else if(
+            data &&
+            typeof data === "object"
+        ){
+
+            event =
+                data.event || "UNKNOWN";
+
+            username =
+                data.username ||
+                data.user ||
+                "unknown";
+
+            ip =
+                data.ip ||
+                "unknown";
+
+            timestamp =
+                data.timestamp ||
+                timestamp;
+
+        }
+
+        else{
+
+            console.error(
+                "❌ Unsupported log:",
+                data
+            );
+
+            return;
+        }
+
+        if(event === "LOGIN_FAIL"){
+
+            const now = Date.now();
+            const recentFailures = (clientFailTimes.get(ip) || [])
+                .filter(function(time){
+                    return now - time <= 10000;
+                });
+
+            recentFailures.push(now);
+            clientFailTimes.set(ip, recentFailures);
+
+            if(
+                recentFailures.length >= 5 &&
+                !clientBruteForceShown.has(ip) &&
+                (!socket.connected || typeof io !== "function")
+            ){
+
+                clientBruteForceShown.add(ip);
+                totalAlerts++;
+                threatScore += 10;
+
+                addAlert(
+                    "BRUTE FORCE DETECTED: " +
+                    recentFailures.length +
+                    " failed logins in 10 seconds",
+                    "SOC correlation",
+                    ip,
+                    "HIGH"
+                );
+
+            }
+
+        }
+
+
+        /* DISPLAY */
+
+        displayLog(
+            event,
+            username,
+            ip,
+            timestamp
+        );
+
+
+        /* IP */
+
+        activeIPs.add(ip);
+
+        document.getElementById(
+            "activeIPs"
+        ).innerText =
+            activeIPs.size;
+
+
+        /* EVENT CLASSIFICATION */
+
+        const criticalList = [
+
+            "RANSOMWARE",
+
+            "YARA_MATCH",
+
+            "MALWARE",
+
+            "CRITICAL"
+
+        ];
+
+        const highList = [
+
+            "SUSPICIOUS"
+
+        ];
+
+        const mediumList = [
+
+            "LOGIN_FAIL",
+
+            "PORT_SCAN"
+
+        ];
+
+
+        if(
+            criticalList.includes(event)
+        ){
+
+            criticalEvents++;
+
+            totalAlerts++;
+
+            threatScore += 10;
+
+            addAlert(
+
+                event,
+
+                username,
+
+                ip,
+
+                "CRITICAL"
+
+            );
+
+        }
+
+        else if(
+            highList.includes(event)
+        ){
+
+            totalAlerts++;
+
+            threatScore += 5;
+
+            addAlert(
+
+                event,
+
+                username,
+
+                ip,
+
+                "HIGH"
+
+            );
+
+        }
+
+        else if(
+            mediumList.includes(event)
+        ){
+
+            threatScore += 1;
+
+        }
+
+
+        updateStats();
+
+
+        const coordinates = getIllustrativeCoordinates(ip, event);
+        const eventSeverity = criticalList.includes(event)
+            ? "CRITICAL"
+            : highList.includes(event)
+                ? "HIGH"
+                : "";
+
+        generateAttackMarker(
+
+            coordinates[0],
+
+            coordinates[1],
+
+            event,
+
+            username,
+
+            ip,
+
+            true,
+
+            eventSeverity
+
+        );
+
+}
+
+
+async function startLivePolling(){
+
+    try{
+
+        const response = await fetch("/logs/latest-id");
+        const data = await response.json();
+
+        if(!response.ok || typeof data.latest_id !== "number"){
+
+            throw new Error("Could not establish live log position");
+
+        }
+
+        lastLogId = data.latest_id;
+
+    }
+    catch(error){
+
+        console.error("Live log position error:", error);
+
+    }
+
+    const poll = async function(){
+
+        try{
+
+            const syncNode = document.getElementById("lastSync");
+
+            if(syncNode){
+
+                syncNode.innerText = new Date().toLocaleTimeString();
+
+            }
+
+            const overviewSyncNode = document.getElementById("overviewSync");
+
+            if(overviewSyncNode){
+
+                overviewSyncNode.innerText = new Date().toLocaleTimeString();
+
+            }
+
+            const response = await fetch(
+                "/logs?after_id=" + encodeURIComponent(lastLogId),
+                {cache: "no-store"}
+            );
+
+            if(!response.ok){
+
+                updateOverviewStatus("API unavailable", "CHECK SERVER STATUS");
+                return;
+
+            }
+
+            const logs = await response.json();
+
+            if(!socket.connected){
+                updateOverviewStatus("Polling active", "API · 2 SEC REFRESH");
+            }
+
+            logs.forEach(handleLog);
+
+        }
+        catch(error){
+
+            console.error("Live log polling error:", error);
+            updateOverviewStatus("Connection issue", "CHECK SERVER CONNECTION");
+
+        }
+
+    };
+
+    await poll();
+    setInterval(poll, 2000);
+
+}
+
+
+/* ============================================================
+   ALERT EVENT
+============================================================ */
+
+socket.on(
+    "alert",
+    function(a){
+
+        console.log(
+            "🚨 ALERT RECEIVED:",
+            a
+        );
+
+        const alertIp = a.ip || "unknown";
+        const alertMessage = a.msg || "Security alert";
+        const alertCoordinates = getIllustrativeCoordinates(alertIp, alertMessage);
+
+        generateAttackMarker(
+            alertCoordinates[0],
+            alertCoordinates[1],
+            alertMessage,
+            "detection engine",
+            alertIp,
+            true,
+            a.severity || "MEDIUM"
+        );
+
+
+        const div =
+            document.createElement(
+                "div"
+            );
+
+        div.className =
+            "alert " +
+            String(
+                a.severity ||
+                "medium"
+            ).toLowerCase();
+
+
+        div.innerHTML = `
+
+            🚨 <b>
+                ${escapeHtml(
+                    a.severity ||
+                    "ALERT"
+                )}
+            </b>
+
+            <br>
+
+            ${escapeHtml(
+                a.msg ||
+                "Security alert"
+            )}
+
+            <br>
+
+            🌐 IP:
+            ${escapeHtml(
+                a.ip ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🌍:
+            ${escapeHtml(
+                a.geo ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🧠 MITRE:
+            ${escapeHtml(
+                a.mitre ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🔎 Intel:
+            ${escapeHtml(
+                a.intel ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🕒:
+            ${escapeHtml(
+                a.time ||
+                ""
+            )}
+
+        `;
+
+        alerts.prepend(div);
+
+
+        while(
+            alerts.children.length > 100
+        ){
+
+            alerts.removeChild(
+                alerts.lastChild
+            );
+
+        }
+
+
+        /* AI */
+
+        const aiDiv =
+            document.createElement(
+                "div"
+            );
+
+        aiDiv.className =
+            "ai-item";
+
+        aiDiv.innerHTML = `
+
+            <span style="color:#ff4a4a;">
+                🚨
+                ${escapeHtml(
+                    a.msg ||
+                    "Security Alert"
+                )}
+            </span>
+
+            <br>
+
+            🌍 Location:
+            ${escapeHtml(
+                a.geo ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🧠 MITRE:
+            ${escapeHtml(
+                a.mitre ||
+                "Unknown"
+            )}
+
+            <br>
+
+            🤖 AI Analysis:
+            Security event correlated
+            by the detection engine.
+
+        `;
+
+        aiAnalysis.prepend(
+            aiDiv
+        );
+
+
+        /* Stats */
+
+        totalAlerts++;
+
+        activeIPs.add(
+            a.ip ||
+            "unknown"
+        );
+
+        if(
+            a.severity ===
+            "CRITICAL"
+        ){
+
+            criticalEvents++;
+
+            threatScore += 30;
+
+        }
+
+        else if(
+            a.severity ===
+            "HIGH"
+        ){
+
+            threatScore += 10;
+
+        }
+
+        else{
+
+            threatScore += 5;
+
+        }
+
+        updateStats();
+
+    }
+);
+
+
+/* ============================================================
+   STATS
+============================================================ */
+
+function updateStats(){
+
+    document.getElementById(
+        "totalAlerts"
+    ).innerText =
+        totalAlerts;
+
+    document.getElementById(
+        "criticalEvents"
+    ).innerText =
+        criticalEvents;
+
+    document.getElementById(
+        "threatScore"
+    ).innerText =
+        threatScore;
+
+    document.getElementById(
+        "activeIPs"
+    ).innerText =
+        activeIPs.size;
+
+    document.getElementById(
+        "threatBar"
+    ).style.width =
+        Math.min(
+            threatScore,
+            100
+        ) + "%";
+}
+
+
+/* ============================================================
+   ALERT DISPLAY
+============================================================ */
+
+function addAlert(
+    event,
+    username,
+    ip,
+    severity
+){
+
+    const div =
+        document.createElement(
+            "div"
+        );
+
+    div.className =
+        "alert " +
+        severity.toLowerCase();
+
+    div.innerHTML = `
+
+        🚨 <b>
+            ${escapeHtml(
+                severity
+            )}
+        </b>
+
+        <br>
+
+        Event:
+        ${escapeHtml(event)}
+
+        <br>
+
+        User:
+        ${escapeHtml(username)}
+
+        <br>
+
+        IP:
+        ${escapeHtml(ip)}
+
+    `;
+
+    alerts.prepend(div);
+
+}
+
+
+/* ============================================================
+   VULNERABILITY SCANNER
+============================================================ */
+
+async function startScan(){
+
+    const target =
+        document.getElementById(
+            "targetInput"
+        ).value.trim();
+
+    const resultsDiv =
+        document.getElementById(
+            "scanResults"
+        );
+
+
+    if(
+        target === ""
+    ){
+
+        resultsDiv.innerHTML =
+            "❌ Please enter target";
+
+        return;
+    }
+
+
+    resultsDiv.innerHTML =
+        "⏳ Scanning target...";
+
+
+    try{
+
+        const response =
+            await fetch(
+                "/scan",
+                {
+
+                    method:"POST",
+
+                    headers:{
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify({
+                            target:target
+                        })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        if(
+            data.error
+        ){
+
+            resultsDiv.innerHTML =
+                "❌ " +
+                escapeHtml(
+                    data.error
+                );
+
+            return;
+        }
+
+
+        let html = `
+
+            <h4>
+                🎯 Target:
+                ${escapeHtml(
+                    data.target
+                )}
+            </h4>
+
+            <h4 style="color:#bf49ff;">
+                🔎 Assessment:
+                ${escapeHtml(
+                    data.risk
+                )}
+                ${
+                    data.potential_severity
+                        ? " · Potential severity: " + escapeHtml(data.potential_severity)
+                        : ""
+                }
+            </h4>
+
+            <div class="scan-assessment-note">
+                ${escapeHtml(data.assessment_note || "Scanner assessment unavailable.")}
+            </div>
+
+            <br>
+
+        `;
+
+
+        if(
+            !data.results ||
+            data.results.length === 0
+        ){
+
+            html +=
+                "No open ports detected.";
+
+        }
+
+        else{
+
+            data.results.forEach(
+                function(r){
+
+                    html += `
+
+                        <div style="
+                            margin-bottom:12px;
+                            padding:10px;
+                            background:#000;
+                            border-radius:10px;
+                        ">
+
+                            PORT:
+                            ${escapeHtml(
+                                r.port
+                            )}
+
+                            <br>
+
+                            SERVICE:
+                            ${escapeHtml(
+                                r.service
+                            )}
+
+                            <br>
+
+                            PRODUCT:
+                            ${escapeHtml(
+                                r.product ||
+                                "Unknown"
+                            )}
+
+                            <br>
+
+                            VERSION:
+                            ${escapeHtml(
+                                r.version ||
+                                "Unknown"
+                            )}
+
+                            <br>
+
+                            STATE:
+                            ${escapeHtml(
+                                r.state
+                            )}
+
+                            <br>
+
+                            CVE candidate (unverified):
+                            ${escapeHtml(
+                                r.cve_candidate ||
+                                "No service-name match"
+                            )}
+
+                        </div>
+
+                    `;
+
+                }
+            );
+
+        }
+
+
+        resultsDiv.innerHTML =
+            html;
+
+    }
+    catch(error){
+
+        console.error(
+            error
+        );
+
+        resultsDiv.innerHTML =
+            "❌ Scan failed";
+
+    }
+
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+startLivePolling();
+
+updateStats();
+
+</script>
+
+</body>
+
+</html>
